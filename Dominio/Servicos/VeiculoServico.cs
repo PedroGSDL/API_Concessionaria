@@ -6,15 +6,12 @@ using MinimalAPI.Dominio.Interfaces;
 using MinimalAPI.Infraestrutura.Db;
 
 
+
 namespace MinimalAPI.Dominio.Servicos;
 
-public class VeiculoServico : iVeiculoServico
+public class VeiculoServico(DbContexto contexto) : iVeiculoServico
 {
-    private readonly DbContexto _contexto;
-    public VeiculoServico(DbContexto contexto)
-    {
-            _contexto = contexto;
-    }
+    private readonly DbContexto _contexto = contexto;
 
     public void Apagar(Veiculo veiculo)
     {
@@ -40,13 +37,19 @@ public class VeiculoServico : iVeiculoServico
     }
 
 
-    public List<Veiculo> Todos(int pagina = 1, string? nome = null, string? marca = null)
+    public List<Veiculo> Todos(int? pagina = 1, string? nome = null, string? marca = null)
     {
         var query = _contexto.Veiculos.AsQueryable();
-        if(!string.IsNullOrEmpty(nome))
+        if (!string.IsNullOrEmpty(nome))
         {
             query = query.Where(v => EF.Functions.Like(v.Nome.ToLower(), $"%{nome}%"));
         }
+        int itensPorPagina = 10;
+
+        if(pagina !=null){
+        query = query.Skip(((int)pagina - 1) * itensPorPagina).Take(itensPorPagina);
+        }
         return query.ToList();
+        
     }
 }
