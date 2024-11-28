@@ -33,31 +33,33 @@ app.MapGet("/", () => Results.Content(
     @"<!DOCTYPE html>
     <html>
     <head>
-    <title> API de Veículos - Minimal API</title>
+    <title>API de Veículos - Minimal API</title>
     <meta charset=""utf-8"" />
-     <style>
-            body {
-                background-color: black;
-                color: white;
-                font-family: Arial, sans-serif;
-                text-align: center;
-                padding: 20px;
-            }
-            a {
-                color: #1E90FF; 
-                text-decoration: none;
-            }
-            a:hover {
-                text-decoration: underline;
-            }
-        </style>
+    <style>
+        body {
+            background-color: black;
+            color: white;
+            font-family: Arial, sans-serif;
+            text-align: center;
+            padding: 20px;
+        }
+        a {
+            color: #1E90FF; 
+            text-decoration: none;
+        }
+        a:hover {
+            text-decoration: underline;
+        }
+    </style>
+    </head>
     <body>
-        <h1>Bem vindo à API de veículos - Minimal API</h1>
+        <h1>Bem-vindo à API de veículos - Minimal API</h1>
         <p>Documentação: <a href='/swagger'>Swagger</a></p>
     </body>
     </html>",
     "text/html"
-));
+)).WithTags("Home");
+
 #endregion
 
 #region Administradores
@@ -67,7 +69,7 @@ app.MapPost("/administradores/login", ([FromBody] LoginDTO loginDTO, iAdministra
         return Results.Ok("Login com sucesso!");
     else
         return Results.Unauthorized();
-});
+}).WithTags("Administradores");
 #endregion
 
 #region Veiculos
@@ -83,14 +85,14 @@ app.MapPost("/veiculos", ([FromBody] VeiculoDTO veiculoDTO, iVeiculoServico veic
     veiculoServico.Incluir(novoVeiculo);
 
     return Results.Created($"/veiculos/{novoVeiculo.Id}", novoVeiculo);
-});
+}).WithTags("Veículos");
 
 app.MapGet("/veiculos", ([FromQuery]int? pagina, iVeiculoServico veiculoServico) =>
 {
     var veiculos = veiculoServico.Todos(pagina);
 
     return Results.Ok(veiculos);
-});
+}).WithTags("Veículos");
 #endregion
 
 #region App
