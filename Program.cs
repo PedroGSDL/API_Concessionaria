@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.Mvc;
 using MinimalAPI.Dominio.Entidades;
 using Microsoft.VisualBasic;
 using MinimalAPI.Dominio.ModelViews;
+using MinimalApi.Dominio.Enuns;
 
 
 #region Builder
@@ -64,13 +65,57 @@ app.MapGet("/", () => Results.Content(
 #endregion
 
 #region Administradores
-app.MapPost("/administradores/login", ([FromBody] LoginDTO loginDTO, iAdministradorServico AdministradorServico) =>
+app.MapPost("/administradores/login", ([FromBody] LoginDTO loginDTO, iAdministradorServico administradorServico) =>
 {
-    if (AdministradorServico.Login(loginDTO) != null)
+    if (administradorServico.Login(loginDTO) != null)
         return Results.Ok("Login com sucesso!");
     else
         return Results.Unauthorized();
 }).WithTags("Administradores");
+
+app.MapGet("/administradores", ([FromQuery] int? pagina, iAdministradorServico administradorServico) =>
+{
+    return Results.Ok(administradorServico.Todos(pagina));
+})
+.WithTags("Administradores");
+
+app.MapGet("/Administradores/{id}", ([FromRoute] int id, iAdministradorServico administradorServico) =>
+{
+    var administrador = administradorServico.BuscaPorId(id);
+    if (administrador == null) return Results.NotFound();
+    return Results.Ok(administrador);
+}).WithTags("Administradores");
+
+
+app.MapPost("/administradores", ([FromBody] AdministradorDTO administradorDTO, iAdministradorServico administradorServico) =>
+{
+    var validacao = new ErrosDeValidacao
+    {
+        Mensagens = new List<string>()
+    };
+
+    if (string.IsNullOrEmpty(administradorDTO.Email))
+        validacao.Mensagens.Add("Email não pode ser vazio");
+    if (string.IsNullOrEmpty(administradorDTO.Senha))
+        validacao.Mensagens.Add("Senha não pode ser vazia");
+    if (administradorDTO.Perfil == null)
+        validacao.Mensagens.Add("Perfil não pode ser vazio");
+
+    if (validacao.Mensagens.Count > 0)
+        return Results.BadRequest(validacao);
+
+    var administrador = new Administrador
+    {
+        Email = administradorDTO.Email,
+        Senha = administradorDTO.Senha,
+        Perfil = administradorDTO.Perfil.ToString() ?? Perfil.editor.ToString()
+    };
+
+    administradorServico.Incluir(administrador);
+
+    return Results.Created($"/administrador/{administrador.Id}", administrador);
+}
+).WithTags("Administradores");
 #endregion
 
 #region Veiculos
