@@ -1,3 +1,4 @@
+#region Usings
 using Microsoft.EntityFrameworkCore;
 using MinimalApi.DTOs;
 using MinimalAPI.Dominio.Servicos;
@@ -15,7 +16,12 @@ using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.ComponentModel.DataAnnotations;
 using MinimalApi.Dominio.ModelViews;
-
+using Microsoft.OpenApi.Models;
+using Microsoft.AspNetCore.Authorization.Infrastructure;
+using Microsoft.Extensions.Options;
+using System.Security.Cryptography.Xml;
+using Microsoft.OpenApi.Models;
+#endregion
 
 #region Builder
 var builder = WebApplication.CreateBuilder(args);
@@ -30,8 +36,9 @@ builder.Services.AddAuthentication(option =>
     option.TokenValidationParameters = new TokenValidationParameters
     {
         ValidateLifetime = true,
-        IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(key))
-
+        IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(key)),
+        ValidateIssuer = false,
+        ValidateAudience = false
     };
 });
 
@@ -39,7 +46,37 @@ builder.Services.AddAuthorization();
 builder.Services.AddScoped<iAdministradorServico, AdministradorServico>();
 builder.Services.AddScoped<iVeiculoServico, VeiculoServico>();
 builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen();
+builder.Services.AddSwaggerGen(options =>
+{
+    options.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
+    {
+        Name = "Authorization",
+        Type = SecuritySchemeType.Http,
+        Scheme = "bearer",
+        BearerFormat = "Jwt",
+        In = ParameterLocation.Header,
+        Description = "Insira o token JWT desta maneira: Bearer {Seu Token}",
+       
+    });
+
+    options.AddSecurityRequirement(new OpenApiSecurityRequirement
+    {
+        {
+            new OpenApiSecurityScheme
+            {
+                Reference = new OpenApiReference
+                {
+                    Type = ReferenceType.SecurityScheme,
+                    Id = "Bearer"
+                }
+            },
+            new string[] {}
+        }
+    });
+});
+
+
+
 
 builder.Services.AddDbContext<DbContexto>(options =>
 {
@@ -82,7 +119,7 @@ app.MapGet("/", () => Results.Content(
     </body>
     </html>",
     "text/html"
-)).WithTags("Home");
+)).AllowAnonymous().WithTags("Home");
 
 #endregion
 
@@ -90,24 +127,29 @@ app.MapGet("/", () => Results.Content(
 
 string GerarTokenJwt(Administrador administrador)
 {
-    if (!string.IsNullOrEmpty(key)) return string.Empty;
+    var key = builder.Configuration["Jwt:Key"];
+    if (string.IsNullOrEmpty(key) || key.Length < 16)
+    {
+        throw new ArgumentException("A chave de segurança deve ter pelo menos 16 caracteres.");
+    }
+
     var securityKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(key));
     var credentials = new SigningCredentials(securityKey, SecurityAlgorithms.HmacSha256);
 
-    var claims = new List<Claim>()
-{
-    new Claim(ClaimTypes.Email, administrador.Email),
-    new Claim("Perfil", administrador.Perfil),
-};
+    var claims = new List<Claim>
+    {
+        new Claim(ClaimTypes.Email, administrador.Email),
+        new Claim("Perfil", administrador.Perfil)
+    };
 
     var token = new JwtSecurityToken(
-    claims: claims,
-    expires: DateTime.Now.AddDays(1),
-    signingCredentials: credentials
+        claims: claims,
+        expires: DateTime.Now.AddDays(1),
+        signingCredentials: credentials
     );
+
     return new JwtSecurityTokenHandler().WriteToken(token);
 }
-
 
 
 
@@ -117,10 +159,8 @@ app.MapPost("/administradores/login", ([FromBody] LoginDTO loginDTO, iAdministra
     var adm = administradorServico.Login(loginDTO);
     if (adm != null)
     {
-        // Gerar o token JWT
-        string token = GerarTokenJwt(adm);
 
-        // Criar o objeto de resposta com as informações do administrador logado
+        string token = GerarTokenJwt(adm);
         var administradorLogado = new AdministradorLogado
         {
             Email = adm.Email,
@@ -134,7 +174,7 @@ app.MapPost("/administradores/login", ([FromBody] LoginDTO loginDTO, iAdministra
     {
         return Results.Unauthorized();
     }
-}).WithTags("Administradores");
+}).AllowAnonymous().WithTags("Administradores");
 
 
 
