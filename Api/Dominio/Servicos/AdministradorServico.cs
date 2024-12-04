@@ -1,13 +1,11 @@
-using System.Data.Common;
+using MinimalApi.Dominio.Entidades;
 using MinimalApi.DTOs;
-using MinimalAPI.Dominio.Entidades;
-using MinimalAPI.Dominio.Interfaces;
-using MinimalAPI.Infraestrutura.Db;
+using MinimalApi.Infraestrutura.Db;
+using MinimalApi.Dominio.Interfaces;
 
+namespace MinimalApi.Dominio.Servicos;
 
-namespace MinimalAPI.Dominio.Servicos;
-
-public class AdministradorServico : iAdministradorServico
+public class AdministradorServico : IAdministradorServico
 {
     private readonly DbContexto _contexto;
     public AdministradorServico(DbContexto contexto)
@@ -15,7 +13,12 @@ public class AdministradorServico : iAdministradorServico
         _contexto = contexto;
     }
 
-    public Administrador? Incluir(Administrador administrador)
+    public Administrador? BuscaPorId(int id)
+    {
+        return _contexto.Administradores.Where(v => v.Id == id).FirstOrDefault();
+    }
+
+    public Administrador Incluir(Administrador administrador)
     {
         _contexto.Administradores.Add(administrador);
         _contexto.SaveChanges();
@@ -32,18 +35,12 @@ public class AdministradorServico : iAdministradorServico
     public List<Administrador> Todos(int? pagina)
     {
         var query = _contexto.Administradores.AsQueryable();
+
         int itensPorPagina = 10;
 
-        if (pagina != null)
-        {
+        if(pagina != null)
             query = query.Skip(((int)pagina - 1) * itensPorPagina).Take(itensPorPagina);
-        }
+
         return query.ToList();
-
     }
-    public Administrador? BuscaPorId(int id)
-    {
-        return _contexto.Administradores.Where(v => v.Id == id).FirstOrDefault();
-    }
-
 }

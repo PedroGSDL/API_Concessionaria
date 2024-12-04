@@ -1,8 +1,8 @@
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Options;
-using MinimalAPI.Dominio.Entidades;
+using MinimalApi.Dominio.Entidades;
 
-namespace MinimalAPI.Infraestrutura.Db;
+namespace MinimalApi.Infraestrutura.Db;
+
 public class DbContexto : DbContext
 {
     private readonly IConfiguration _configuracaoAppSettings;
@@ -10,30 +10,43 @@ public class DbContexto : DbContext
     {
         _configuracaoAppSettings = configuracaoAppSettings;
     }
+
     public DbSet<Administrador> Administradores { get; set; } = default!;
     public DbSet<Veiculo> Veiculos { get; set; } = default!;
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.Entity<Administrador>().HasData(
-         new Administrador
-         {
-             Id = 1,
-             Email = "Administrador@teste.com",
-             Senha = "123456",
-             Perfil = "Adm"
-         }
+            new Administrador {
+                Id = 1,
+                Email = "administrador@teste.com",
+                Senha = "123456",
+                Perfil = "Adm"
+             }
         );
     }
+
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
+{
+    if (!optionsBuilder.IsConfigured)
     {
-        if (!optionsBuilder.IsConfigured)
+        var stringConexao = _configuracaoAppSettings.GetConnectionString("MySql");
+
+        // Adicionando log para verificar a string de conexão
+        Console.WriteLine($"Usando a string de conexão: {stringConexao}");
+
+        if (!string.IsNullOrEmpty(stringConexao))
         {
-            var stringConexao = _configuracaoAppSettings.GetConnectionString("mysql")?.ToString();
-            if (!string.IsNullOrEmpty(stringConexao))
-            {
-                optionsBuilder.UseMySql(stringConexao,
-                ServerVersion.AutoDetect(stringConexao));
-            }
+            optionsBuilder.UseMySql(
+                stringConexao,
+                ServerVersion.AutoDetect(stringConexao)
+            );
+        }
+        else
+        {
+            Console.WriteLine("A string de conexão está vazia ou nula.");
         }
     }
+}
+
 }

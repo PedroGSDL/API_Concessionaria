@@ -1,17 +1,18 @@
-using System.Data.Common;
-using Microsoft.EntityFrameworkCore;
+using MinimalApi.Dominio.Entidades;
 using MinimalApi.DTOs;
-using MinimalAPI.Dominio.Entidades;
-using MinimalAPI.Dominio.Interfaces;
-using MinimalAPI.Infraestrutura.Db;
+using MinimalApi.Infraestrutura.Db;
+using MinimalApi.Dominio.Interfaces;
+using Microsoft.EntityFrameworkCore;
 
+namespace MinimalApi.Dominio.Servicos;
 
-
-namespace MinimalAPI.Dominio.Servicos;
-
-public class VeiculoServico(DbContexto contexto) : iVeiculoServico
+public class VeiculoServico : IVeiculoServico
 {
-    private readonly DbContexto _contexto = contexto;
+    private readonly DbContexto _contexto;
+    public VeiculoServico(DbContexto contexto)
+    {
+        _contexto = contexto;
+    }
 
     public void Apagar(Veiculo veiculo)
     {
@@ -36,20 +37,19 @@ public class VeiculoServico(DbContexto contexto) : iVeiculoServico
         _contexto.SaveChanges();
     }
 
-
     public List<Veiculo> Todos(int? pagina = 1, string? nome = null, string? marca = null)
     {
         var query = _contexto.Veiculos.AsQueryable();
-        if (!string.IsNullOrEmpty(nome))
+        if(!string.IsNullOrEmpty(nome))
         {
             query = query.Where(v => EF.Functions.Like(v.Nome.ToLower(), $"%{nome}%"));
         }
+
         int itensPorPagina = 10;
 
-        if(pagina !=null){
-        query = query.Skip(((int)pagina - 1) * itensPorPagina).Take(itensPorPagina);
-        }
+        if(pagina != null)
+            query = query.Skip(((int)pagina - 1) * itensPorPagina).Take(itensPorPagina);
+
         return query.ToList();
-        
     }
 }
